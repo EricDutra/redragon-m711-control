@@ -58,7 +58,7 @@ Requisito: Visual Studio 2022 ou mais recente, com a carga de trabalho **Desenvo
 O Dear ImGui é um submódulo git, então clone com `--recursive`:
 
 ```
-git clone --recursive https://github.com/SEU-USUARIO/redragon-m711-control.git
+git clone --recursive https://github.com/EricDutra/redragon-m711-control.git
 cd redragon-m711-control
 build.bat
 ```
