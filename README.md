@@ -6,6 +6,8 @@ Um único `.exe`, sem instalador e sem dependências além do próprio Windows.
 
 > Projeto pessoal e não oficial, sem qualquer vínculo com a Redragon. O protocolo foi obtido por engenharia reversa do software oficial. Use por sua conta e risco.
 
+![Redragon Control](docs/screenshot.png)
+
 ## Funcionalidades
 
 - **Perfis:** edita os 5 perfis e escolhe qual fica ativo no mouse.
