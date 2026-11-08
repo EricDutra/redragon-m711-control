@@ -4,8 +4,11 @@
 #include <cstdio>
 #include <iterator>
 
+#include "i18n.h"
 #include "imgui.h"
 #include "keys.h"
+
+using i18n::tr;
 
 namespace {
 
@@ -13,40 +16,57 @@ struct Preset {
     uint8_t code;
     uint8_t arg1;
     const char* name;
+    const char* namePt;
     bool verified;
 };
 
 constexpr Preset kPresets[] = {
-    {0x81, 0x00, "Clique esquerdo", true},
-    {0x82, 0x00, "Clique direito", true},
-    {0x83, 0x00, "Clique do meio", true},
-    {0x85, 0x00, "Avançar (lateral)", true},
-    {0x84, 0x00, "Voltar (lateral)", true},
-    {0x8A, 0x00, "DPI +", true},
-    {0x89, 0x00, "DPI -", true},
-    {0x88, 0x00, "DPI: ciclo", false},
-    {0x97, 0x00, "Perfil +", false},
-    {0x98, 0x00, "Perfil -", false},
-    {0x8D, 0x00, "Perfil: ciclo", false},
-    {0x8B, 0x00, "Polling rate +", false},
-    {0x8C, 0x00, "Polling rate -", false},
-    {0x94, 0x00, "Rolar para cima", false},
-    {0x95, 0x00, "Rolar para baixo", false},
-    {0x9B, 0x04, "Função de fábrica do botão 8", true},
-    {0x00, 0x00, "Desativado", true},
+    {0x81, 0x00, "Left click", "Clique esquerdo", true},
+    {0x82, 0x00, "Right click", "Clique direito", true},
+    {0x83, 0x00, "Middle click", "Clique do meio", true},
+    {0x85, 0x00, "Forward (side)", "Avançar (lateral)", true},
+    {0x84, 0x00, "Back (side)", "Voltar (lateral)", true},
+    {0x8A, 0x00, "DPI +", "DPI +", true},
+    {0x89, 0x00, "DPI -", "DPI -", true},
+    {0x88, 0x00, "DPI cycle", "DPI: ciclo", false},
+    {0x97, 0x00, "Profile +", "Perfil +", false},
+    {0x98, 0x00, "Profile -", "Perfil -", false},
+    {0x8D, 0x00, "Profile cycle", "Perfil: ciclo", false},
+    {0x8B, 0x00, "Polling rate +", "Polling rate +", false},
+    {0x8C, 0x00, "Polling rate -", "Polling rate -", false},
+    {0x94, 0x00, "Scroll up", "Rolar para cima", false},
+    {0x95, 0x00, "Scroll down", "Rolar para baixo", false},
+    {0x9B, 0x04, "Button 8 factory function", "Função de fábrica do botão 8", true},
+    {0x00, 0x00, "Disabled", "Desativado", true},
 };
 
 enum ButtonKind { KindPreset, KindKeyboard, KindMedia, KindMacro, KindRaw, KindCount };
-constexpr const char* kKindNames[KindCount] = {"Função", "Tecla / atalho", "Mídia", "Macro", "Personalizado (hex)"};
+const char* kindName(int kind) {
+    switch (kind) {
+    case KindPreset: return tr("Function", "Função");
+    case KindKeyboard: return tr("Key / shortcut", "Tecla / atalho");
+    case KindMedia: return tr("Media", "Mídia");
+    case KindMacro: return "Macro";
+    default: return tr("Custom (hex)", "Personalizado (hex)");
+    }
+}
 
 constexpr uint8_t kCodeKeyboard = 0x8F;
 constexpr uint8_t kCodeMedia = 0x8E;
 constexpr uint8_t kCodeMacro = 0x91;
 
-constexpr const char* kButtonLabels[rdc::kButtonCount] = {
-    "Botão 1 (esquerdo)", "Botão 2 (direito)", "Botão 3 (roda)", "Botão 4 (lateral frente)",
-    "Botão 5 (lateral trás)", "Botão 6 (DPI +)", "Botão 7 (DPI -)", "Botão 8",
-};
+const char* buttonLabel(int index) {
+    switch (index) {
+    case 0: return tr("Button 1 (left)", "Botão 1 (esquerdo)");
+    case 1: return tr("Button 2 (right)", "Botão 2 (direito)");
+    case 2: return tr("Button 3 (wheel)", "Botão 3 (roda)");
+    case 3: return tr("Button 4 (side front)", "Botão 4 (lateral frente)");
+    case 4: return tr("Button 5 (side rear)", "Botão 5 (lateral trás)");
+    case 5: return tr("Button 6 (DPI +)", "Botão 6 (DPI +)");
+    case 6: return tr("Button 7 (DPI -)", "Botão 7 (DPI -)");
+    default: return tr("Button 8", "Botão 8");
+    }
+}
 
 constexpr rdc::LedEffect kEffects[] = {
     rdc::LedEffect::Static, rdc::LedEffect::Breathing, rdc::LedEffect::Flash, rdc::LedEffect::Reactive,
@@ -55,7 +75,6 @@ constexpr rdc::LedEffect kEffects[] = {
 
 constexpr int kPollRates[] = {125, 250, 500, 1000};
 
-constexpr const char* kRepeatNames[] = {"Repetir N vezes", "Repetir enquanto pressionado", "Alternar (liga/desliga)"};
 constexpr rdc::MacroRepeat kRepeatModes[] = {rdc::MacroRepeat::Count, rdc::MacroRepeat::WhileHeld,
                                              rdc::MacroRepeat::Toggle};
 
@@ -93,6 +112,10 @@ rdc::ButtonAction defaultAction(ButtonKind kind) {
     }
 }
 
+std::string presetName(const Preset& preset) {
+    return std::string(tr(preset.name, preset.namePt)) + (preset.verified ? "" : " *");
+}
+
 bool hasLeftClick(const std::array<rdc::ButtonAction, rdc::kButtonCount>& buttons) {
     return std::any_of(buttons.begin(), buttons.end(), [](const rdc::ButtonAction& a) { return a.code == 0x81; });
 }
@@ -101,19 +124,19 @@ std::string describeEvent(const rdc::MacroEvent& event) {
     char buffer[96];
     switch (event.type) {
     case rdc::MacroEventType::KeyDown:
-        std::snprintf(buffer, sizeof(buffer), "Pressionar  %s", keys::nameFromHid(static_cast<uint8_t>(event.value)));
+        std::snprintf(buffer, sizeof(buffer), "%-10s %s", tr("Press", "Pressionar"), keys::nameFromHid(static_cast<uint8_t>(event.value)));
         break;
     case rdc::MacroEventType::KeyUp:
-        std::snprintf(buffer, sizeof(buffer), "Soltar      %s", keys::nameFromHid(static_cast<uint8_t>(event.value)));
+        std::snprintf(buffer, sizeof(buffer), "%-10s %s", tr("Release", "Soltar"), keys::nameFromHid(static_cast<uint8_t>(event.value)));
         break;
     case rdc::MacroEventType::MouseDown:
-        std::snprintf(buffer, sizeof(buffer), "Pressionar  %s", keys::mouseButtonName(event.value));
+        std::snprintf(buffer, sizeof(buffer), "%-10s %s", tr("Press", "Pressionar"), keys::mouseButtonName(event.value));
         break;
     case rdc::MacroEventType::MouseUp:
-        std::snprintf(buffer, sizeof(buffer), "Soltar      %s", keys::mouseButtonName(event.value));
+        std::snprintf(buffer, sizeof(buffer), "%-10s %s", tr("Release", "Soltar"), keys::mouseButtonName(event.value));
         break;
     case rdc::MacroEventType::Delay:
-        std::snprintf(buffer, sizeof(buffer), "Esperar     %d ms", event.value * 10);
+        std::snprintf(buffer, sizeof(buffer), "%-10s %d ms", tr("Wait", "Esperar"), event.value * 10);
         break;
     }
     return buffer;
@@ -147,14 +170,14 @@ void App::connect() {
 
 void App::reload() {
     if (!mouse_.readState(state_)) {
-        setStatus("Erro ao ler o mouse: " + mouse_.lastError(), true);
+        setStatus(std::string(tr("Error reading the mouse: ", "Erro ao ler o mouse: ")) + mouse_.lastError(), true);
         loaded_ = false;
         return;
     }
     loaded_ = true;
     profile_ = std::clamp<int>(state_.activeProfile, 0, rdc::kProfileCount - 1);
     macroLoaded_ = false;
-    setStatus("Configuração lida do mouse.", false);
+    setStatus(tr("Settings read from the mouse.", "Configuração lida do mouse."), false);
 }
 
 void App::setStatus(const std::string& message, bool error) {
@@ -166,7 +189,7 @@ void App::reportResult(bool ok, const char* success) {
     if (ok) {
         setStatus(success, false);
     } else {
-        setStatus("Falha: " + mouse_.lastError(), true);
+        setStatus(std::string(tr("Failed: ", "Falha: ")) + mouse_.lastError(), true);
     }
 }
 
@@ -183,23 +206,23 @@ void App::draw() {
 
     if (loaded_) {
         if (ImGui::BeginTabBar("tabs")) {
-            if (ImGui::BeginTabItem("Iluminação")) {
+            if (ImGui::BeginTabItem(tr("Lighting###lighting", "Iluminação###lighting"))) {
                 drawLightingTab();
                 ImGui::EndTabItem();
             }
-            if (ImGui::BeginTabItem("DPI")) {
+            if (ImGui::BeginTabItem("DPI###dpi")) {
                 drawDpiTab();
                 ImGui::EndTabItem();
             }
-            if (ImGui::BeginTabItem("Botões")) {
+            if (ImGui::BeginTabItem(tr("Buttons###buttons", "Botões###buttons"))) {
                 drawButtonsTab();
                 ImGui::EndTabItem();
             }
-            if (ImGui::BeginTabItem("Polling rate")) {
+            if (ImGui::BeginTabItem("Polling rate###poll")) {
                 drawPollTab();
                 ImGui::EndTabItem();
             }
-            if (ImGui::BeginTabItem("Macros")) {
+            if (ImGui::BeginTabItem("Macros###macros")) {
                 drawMacroTab();
                 ImGui::EndTabItem();
             }
@@ -207,7 +230,8 @@ void App::draw() {
         }
     } else {
         ImGui::Spacing();
-        ImGui::TextWrapped("Conecte o mouse Redragon M711 (04D9:FC30) e clique em \"Conectar\".");
+        ImGui::TextWrapped("%s", tr("Connect the Redragon M711 mouse (04D9:FC30) and click \"Connect\".",
+                                    "Conecte o mouse Redragon M711 (04D9:FC30) e clique em \"Conectar\"."));
     }
 
     float statusHeight = ImGui::GetFrameHeightWithSpacing();
@@ -223,10 +247,14 @@ void App::drawHeader() {
     if (mouse_.isConnected()) {
         ImGui::Text("Redragon M711 (2710-H)  |  firmware 0x%04X", mouse_.firmwareRevision());
     } else {
-        ImGui::TextDisabled("Mouse desconectado");
+        ImGui::TextDisabled("%s", tr("Mouse disconnected", "Mouse desconectado"));
     }
-    ImGui::SameLine(ImGui::GetContentRegionAvail().x - 190.0f);
-    if (ImGui::Button(mouse_.isConnected() ? "Recarregar" : "Conectar", ImVec2(90, 0))) {
+    ImGui::SameLine(ImGui::GetContentRegionAvail().x - 330.0f);
+    drawLanguageSelector();
+    ImGui::SameLine();
+    const char* primary = mouse_.isConnected() ? tr("Reload###primary", "Recarregar###primary")
+                                               : tr("Connect###primary", "Conectar###primary");
+    if (ImGui::Button(primary, ImVec2(100, 0))) {
         if (mouse_.isConnected()) {
             reload();
         } else {
@@ -234,7 +262,7 @@ void App::drawHeader() {
         }
     }
     ImGui::SameLine();
-    if (ImGui::Button("Reconectar", ImVec2(90, 0))) {
+    if (ImGui::Button(tr("Reconnect###reconnect", "Reconectar###reconnect"), ImVec2(100, 0))) {
         connect();
     }
 
@@ -242,7 +270,7 @@ void App::drawHeader() {
         return;
     }
 
-    ImGui::Text("Perfil em edição:");
+    ImGui::TextUnformatted(tr("Editing profile:", "Perfil em edição:"));
     for (int p = 0; p < rdc::kProfileCount; ++p) {
         ImGui::SameLine();
         char label[32];
@@ -260,15 +288,26 @@ void App::drawHeader() {
     }
     ImGui::SameLine();
     ImGui::BeginDisabled(profile_ == state_.activeProfile);
-    if (ImGui::Button("Ativar este perfil no mouse")) {
+    if (ImGui::Button(tr("Activate this profile on the mouse###activate", "Ativar este perfil no mouse###activate"))) {
         bool ok = mouse_.writeActiveProfile(static_cast<uint8_t>(profile_));
         if (ok) {
             state_.activeProfile = static_cast<uint8_t>(profile_);
         }
-        reportResult(ok, "Perfil ativado.");
+        reportResult(ok, tr("Profile activated.", "Perfil ativado."));
     }
     ImGui::EndDisabled();
-    helpMarker("* indica o perfil ativo no mouse. Cada perfil guarda LED, DPI, botões e polling rate próprios.");
+    helpMarker(tr("* marks the profile active on the mouse. Each profile stores its own lighting, DPI, buttons and polling rate.",
+                   "* indica o perfil ativo no mouse. Cada perfil guarda LED, DPI, botões e polling rate próprios."));
+}
+
+void App::drawLanguageSelector() {
+    const char* names[] = {"English", "Português"};
+    int current = i18n::language() == i18n::Language::Portuguese ? 1 : 0;
+    ImGui::SetNextItemWidth(110);
+    if (ImGui::Combo("##language", &current, names, IM_ARRAYSIZE(names))) {
+        i18n::setLanguage(current == 1 ? i18n::Language::Portuguese : i18n::Language::English);
+        i18n::saveLanguage();
+    }
 }
 
 void App::drawLightingTab() {
@@ -276,7 +315,7 @@ void App::drawLightingTab() {
     ImGui::Spacing();
     ImGui::PushItemWidth(300);
 
-    if (ImGui::BeginCombo("Efeito", rdc::ledEffectName(led.effect))) {
+    if (ImGui::BeginCombo(tr("Effect###effect", "Efeito###effect"), rdc::ledEffectName(led.effect))) {
         for (auto effect : kEffects) {
             if (ImGui::Selectable(rdc::ledEffectName(effect), effect == led.effect)) {
                 led.effect = effect;
@@ -291,7 +330,7 @@ void App::drawLightingTab() {
                      led.effect == rdc::LedEffect::GoWithoutTrace;
     ImGui::BeginDisabled(!usesColor);
     ImGui::SetNextItemWidth(240);
-    if (ImGui::ColorPicker3("Cor", color, ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_DisplayRGB)) {
+    if (ImGui::ColorPicker3(tr("Color###color", "Cor###color"), color, ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_DisplayRGB)) {
         led.red = static_cast<uint8_t>(color[0] * 255.0f + 0.5f);
         led.green = static_cast<uint8_t>(color[1] * 255.0f + 0.5f);
         led.blue = static_cast<uint8_t>(color[2] * 255.0f + 0.5f);
@@ -300,38 +339,39 @@ void App::drawLightingTab() {
 
     int speed = std::clamp<int>(led.speed, 1, 8);
     ImGui::BeginDisabled(!rdc::ledEffectHasSpeed(led.effect));
-    if (ImGui::SliderInt("Velocidade", &speed, 1, 8)) {
+    if (ImGui::SliderInt(tr("Speed###speed", "Velocidade###speed"), &speed, 1, 8)) {
         led.speed = static_cast<uint8_t>(speed);
     }
     ImGui::EndDisabled();
 
     int brightness = std::clamp<int>(led.brightness, 1, 3);
     ImGui::BeginDisabled(led.effect == rdc::LedEffect::Off);
-    if (ImGui::SliderInt("Brilho", &brightness, 1, 3)) {
+    if (ImGui::SliderInt(tr("Brightness###brightness", "Brilho###brightness"), &brightness, 1, 3)) {
         led.brightness = static_cast<uint8_t>(brightness);
     }
     ImGui::EndDisabled();
 
     ImGui::PopItemWidth();
     ImGui::Spacing();
-    if (ImGui::Button("Aplicar iluminação", ImVec2(180, 0))) {
+    if (ImGui::Button(tr("Apply lighting###applyLed", "Aplicar iluminação###applyLed"), ImVec2(180, 0))) {
         if (led.effect == rdc::LedEffect::Unknown) {
             led.effect = rdc::LedEffect::Static;
         }
-        reportResult(mouse_.writeLed(profile_, led), "Iluminação aplicada.");
+        reportResult(mouse_.writeLed(profile_, led), tr("Lighting applied.", "Iluminação aplicada."));
     }
 }
 
 void App::drawDpiTab() {
     rdc::Profile& profile = state_.profiles[profile_];
     ImGui::Spacing();
-    ImGui::TextWrapped("Até 6200 DPI o sensor trabalha nativamente; acima disso o firmware usa interpolação.");
+    ImGui::TextWrapped("%s", tr("Up to 6200 DPI the sensor works natively; above that the firmware uses interpolation.",
+                                "Até 6200 DPI o sensor trabalha nativamente; acima disso o firmware usa interpolação."));
     ImGui::Spacing();
 
     if (ImGui::BeginTable("dpi", 4, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg)) {
-        ImGui::TableSetupColumn("Estágio");
-        ImGui::TableSetupColumn("Ativo");
-        ImGui::TableSetupColumn("Habilitado");
+        ImGui::TableSetupColumn(tr("Stage", "Estágio"));
+        ImGui::TableSetupColumn(tr("Active", "Ativo"));
+        ImGui::TableSetupColumn(tr("Enabled", "Habilitado"));
         ImGui::TableSetupColumn("DPI", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableHeadersRow();
 
@@ -363,11 +403,11 @@ void App::drawDpiTab() {
     }
 
     ImGui::Spacing();
-    if (ImGui::Button("Aplicar DPI", ImVec2(180, 0))) {
+    if (ImGui::Button(tr("Apply DPI###applyDpi", "Aplicar DPI###applyDpi"), ImVec2(180, 0))) {
         if (!profile.dpi[profile.activeDpiStage].enabled) {
-            setStatus("O estágio ativo precisa estar habilitado.", true);
+            setStatus(tr("The active stage must be enabled.", "O estágio ativo precisa estar habilitado."), true);
         } else {
-            reportResult(mouse_.writeDpi(profile_, profile.activeDpiStage, profile.dpi), "DPI aplicado.");
+            reportResult(mouse_.writeDpi(profile_, profile.activeDpiStage, profile.dpi), tr("DPI applied.", "DPI aplicado."));
         }
     }
 }
@@ -376,9 +416,9 @@ void App::drawButtonsTab() {
     rdc::Profile& profile = state_.profiles[profile_];
     ImGui::Spacing();
     if (ImGui::BeginTable("buttons", 3, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg)) {
-        ImGui::TableSetupColumn("Botão");
-        ImGui::TableSetupColumn("Tipo");
-        ImGui::TableSetupColumn("Ação", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn(tr("Button", "Botão"));
+        ImGui::TableSetupColumn(tr("Type", "Tipo"));
+        ImGui::TableSetupColumn(tr("Action", "Ação"), ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableHeadersRow();
         for (int i = 0; i < rdc::kButtonCount; ++i) {
             ImGui::PushID(i);
@@ -387,13 +427,14 @@ void App::drawButtonsTab() {
         }
         ImGui::EndTable();
     }
-    ImGui::TextDisabled("Funções marcadas com * foram inferidas do software original, mas ainda não testadas.");
+    ImGui::TextDisabled("%s", tr("Functions marked with * were inferred from the original software but are not tested yet.",
+                                  "Funções marcadas com * foram inferidas do software original, mas ainda não testadas."));
     ImGui::Spacing();
-    if (ImGui::Button("Aplicar botões", ImVec2(180, 0))) {
+    if (ImGui::Button(tr("Apply buttons###applyButtons", "Aplicar botões###applyButtons"), ImVec2(180, 0))) {
         if (!hasLeftClick(profile.buttons)) {
-            setStatus("Pelo menos um botão precisa continuar como clique esquerdo.", true);
+            setStatus(tr("At least one button must remain as left click.", "Pelo menos um botão precisa continuar como clique esquerdo."), true);
         } else {
-            reportResult(mouse_.writeButtons(profile_, profile.buttons), "Botões aplicados.");
+            reportResult(mouse_.writeButtons(profile_, profile.buttons), tr("Buttons applied.", "Botões aplicados."));
         }
     }
 }
@@ -402,14 +443,14 @@ void App::drawButtonEditor(int index, rdc::ButtonAction& action) {
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
     ImGui::AlignTextToFramePadding();
-    ImGui::TextUnformatted(kButtonLabels[index]);
+    ImGui::TextUnformatted(buttonLabel(index));
 
     ImGui::TableNextColumn();
     ButtonKind kind = kindOf(action);
     ImGui::SetNextItemWidth(170);
-    if (ImGui::BeginCombo("##kind", kKindNames[kind])) {
+    if (ImGui::BeginCombo("##kind", kindName(kind))) {
         for (int k = 0; k < KindCount; ++k) {
-            if (ImGui::Selectable(kKindNames[k], k == kind) && k != kind) {
+            if (ImGui::Selectable(kindName(k), k == kind) && k != kind) {
                 if (k != KindRaw) {
                     action = defaultAction(static_cast<ButtonKind>(k));
                 }
@@ -422,11 +463,11 @@ void App::drawButtonEditor(int index, rdc::ButtonAction& action) {
     switch (kind) {
     case KindPreset: {
         const Preset* current = findPreset(action);
-        std::string currentName = current ? std::string(current->name) + (current->verified ? "" : " *") : "?";
+        std::string currentName = current ? presetName(*current) : "?";
         ImGui::SetNextItemWidth(260);
         if (ImGui::BeginCombo("##preset", currentName.c_str())) {
             for (const auto& preset : kPresets) {
-                std::string name = std::string(preset.name) + (preset.verified ? "" : " *");
+                std::string name = presetName(preset);
                 if (ImGui::Selectable(name.c_str(), &preset == current)) {
                     action = {preset.code, preset.arg1, 0, 0};
                 }
@@ -450,12 +491,13 @@ void App::drawButtonEditor(int index, rdc::ButtonAction& action) {
         action.arg1 = static_cast<uint8_t>((ctrl ? 0x01 : 0) | (shift ? 0x02 : 0) | (alt ? 0x04 : 0) | (win ? 0x08 : 0));
         ImGui::SameLine();
         ImGui::SetNextItemWidth(140);
-        if (ImGui::BeginCombo("##key", action.arg2 ? keys::nameFromHid(action.arg2) : "(só modificador)")) {
-            if (ImGui::Selectable("(só modificador)", action.arg2 == 0)) {
+        const char* modifierOnly = tr("(modifier only)", "(só modificador)");
+        if (ImGui::BeginCombo("##key", action.arg2 ? keys::nameFromHid(action.arg2) : modifierOnly)) {
+            if (ImGui::Selectable(modifierOnly, action.arg2 == 0)) {
                 action.arg2 = 0;
             }
             for (const auto& key : keys::keyboardKeys()) {
-                if (ImGui::Selectable(key.name, key.hid == action.arg2)) {
+                if (ImGui::Selectable(keys::label(key), key.hid == action.arg2)) {
                     action.arg2 = key.hid;
                 }
             }
@@ -469,7 +511,7 @@ void App::drawButtonEditor(int index, rdc::ButtonAction& action) {
         ImGui::SetNextItemWidth(260);
         if (ImGui::BeginCombo("##media", keys::nameFromMedia(usage))) {
             for (const auto& media : keys::mediaKeys()) {
-                if (ImGui::Selectable(media.name, media.usage == usage)) {
+                if (ImGui::Selectable(keys::label(media), media.usage == usage)) {
                     action = {kCodeMedia, 0x01, static_cast<uint8_t>(media.usage & 0xFF),
                               static_cast<uint8_t>(media.usage >> 8)};
                 }
@@ -497,14 +539,17 @@ void App::drawButtonEditor(int index, rdc::ButtonAction& action) {
         }
         ImGui::SameLine();
         ImGui::SetNextItemWidth(220);
-        ImGui::Combo("##mode", &modeIndex, kRepeatNames, IM_ARRAYSIZE(kRepeatNames));
+        const char* repeatNames[] = {tr("Repeat N times", "Repetir N vezes"),
+                                     tr("Repeat while held", "Repetir enquanto pressionado"),
+                                     tr("Toggle (on/off)", "Alternar (liga/desliga)")};
+        ImGui::Combo("##mode", &modeIndex, repeatNames, IM_ARRAYSIZE(repeatNames));
         if (modeIndex == 0) {
             ImGui::SameLine();
             ImGui::SetNextItemWidth(90);
             if (count < 1 || count > 0xFFFE) {
                 count = 1;
             }
-            ImGui::InputInt("vezes", &count);
+            ImGui::InputInt(tr("times###times", "vezes###times"), &count);
             count = std::clamp(count, 1, 0xFFFE);
         } else {
             count = 0xFFFF;
@@ -536,7 +581,7 @@ void App::drawPollTab() {
     rdc::Profile& profile = state_.profiles[profile_];
     ImGui::Spacing();
     int current = rdc::pollHzFromRaw(profile.pollRaw);
-    ImGui::Text("Taxa de atualização (USB):");
+    ImGui::TextUnformatted(tr("Report rate (USB):", "Taxa de atualização (USB):"));
     for (int hz : kPollRates) {
         char label[16];
         std::snprintf(label, sizeof(label), "%d Hz", hz);
@@ -547,15 +592,17 @@ void App::drawPollTab() {
     }
     ImGui::NewLine();
     ImGui::Spacing();
-    if (ImGui::Button("Aplicar polling rate", ImVec2(180, 0))) {
-        reportResult(mouse_.writePollRate(profile_, profile.pollRaw), "Polling rate aplicado.");
+    if (ImGui::Button(tr("Apply polling rate###applyPoll", "Aplicar polling rate###applyPoll"), ImVec2(180, 0))) {
+        reportResult(mouse_.writePollRate(profile_, profile.pollRaw), tr("Polling rate applied.", "Polling rate aplicado."));
     }
 }
 
 void App::drawMacroTab() {
     ImGui::Spacing();
-    ImGui::TextWrapped("As macros ficam gravadas na memória do mouse (%d posições, até %d eventos cada) e funcionam "
-                       "sem este programa aberto. Para usar uma macro, associe-a a um botão na aba Botões.",
+    ImGui::TextWrapped(tr("Macros are stored in the mouse memory (%d slots, up to %d events each) and work without this "
+                          "program running. To use a macro, assign it to a button in the Buttons tab.",
+                          "As macros ficam gravadas na memória do mouse (%d posições, até %d eventos cada) e funcionam "
+                          "sem este programa aberto. Para usar uma macro, associe-a a um botão na aba Botões."),
                        rdc::kMacroCount, rdc::kMacroMaxEvents);
     ImGui::Spacing();
 
@@ -575,20 +622,20 @@ void App::drawMacroTab() {
         ImGui::EndCombo();
     }
     ImGui::SameLine();
-    if (ImGui::Button("Ler do mouse") || !macroLoaded_) {
+    if (ImGui::Button(tr("Read from mouse###readMacro", "Ler do mouse###readMacro")) || !macroLoaded_) {
         macroLoaded_ = true;
         if (mouse_.readMacro(macroIndex_, macroEvents_)) {
-            setStatus("Macro lida do mouse.", false);
+            setStatus(tr("Macro read from the mouse.", "Macro lida do mouse."), false);
         } else {
-            setStatus("Falha ao ler macro: " + mouse_.lastError(), true);
+            setStatus(std::string(tr("Failed to read macro: ", "Falha ao ler macro: ")) + mouse_.lastError(), true);
         }
     }
     ImGui::SameLine();
-    if (ImGui::Button("Gravar no mouse")) {
-        reportResult(mouse_.writeMacro(macroIndex_, macroEvents_), "Macro gravada no mouse.");
+    if (ImGui::Button(tr("Write to mouse###writeMacro", "Gravar no mouse###writeMacro"))) {
+        reportResult(mouse_.writeMacro(macroIndex_, macroEvents_), tr("Macro written to the mouse.", "Macro gravada no mouse."));
     }
     ImGui::SameLine();
-    if (ImGui::Button("Limpar")) {
+    if (ImGui::Button(tr("Clear###clearMacro", "Limpar###clearMacro"))) {
         macroEvents_.clear();
     }
     ImGui::EndDisabled();
@@ -596,50 +643,52 @@ void App::drawMacroTab() {
     ImGui::Separator();
 
     if (!recording_) {
-        if (ImGui::Button("Gravar teclas", ImVec2(130, 0))) {
+        if (ImGui::Button(tr("Record keys###record", "Gravar teclas###record"), ImVec2(130, 0))) {
             macroEvents_.clear();
             recording_ = true;
             lastRecordTime_ = std::chrono::steady_clock::now();
-            setStatus("Gravando... pressione as teclas. Clique em \"Parar\" para terminar.", false);
+            setStatus(tr("Recording... press the keys. Click \"Stop\" to finish.",
+                          "Gravando... pressione as teclas. Clique em \"Parar\" para terminar."),
+                      false);
         }
     } else {
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.75f, 0.15f, 0.15f, 1.0f));
-        if (ImGui::Button("Parar", ImVec2(130, 0))) {
+        if (ImGui::Button(tr("Stop###stop", "Parar###stop"), ImVec2(130, 0))) {
             recording_ = false;
-            setStatus("Gravação encerrada.", false);
+            setStatus(tr("Recording finished.", "Gravação encerrada."), false);
         }
         ImGui::PopStyleColor();
     }
     ImGui::SameLine();
-    ImGui::Checkbox("Gravar tempos entre teclas", &recordDelays_);
+    ImGui::Checkbox(tr("Record delays between keys###delays", "Gravar tempos entre teclas###delays"), &recordDelays_);
 
     ImGui::BeginDisabled(recording_);
     ImGui::SetNextItemWidth(150);
     const auto keyList = keys::keyboardKeys();
     newKeyIndex_ = std::clamp(newKeyIndex_, 0, static_cast<int>(keyList.size()) - 1);
-    if (ImGui::BeginCombo("##newKey", keyList[newKeyIndex_].name)) {
+    if (ImGui::BeginCombo("##newKey", keys::label(keyList[newKeyIndex_]))) {
         for (int k = 0; k < static_cast<int>(keyList.size()); ++k) {
-            if (ImGui::Selectable(keyList[k].name, k == newKeyIndex_)) {
+            if (ImGui::Selectable(keys::label(keyList[k]), k == newKeyIndex_)) {
                 newKeyIndex_ = k;
             }
         }
         ImGui::EndCombo();
     }
     ImGui::SameLine();
-    if (ImGui::Button("+ Tecla")) {
+    if (ImGui::Button(tr("+ Key###addKey", "+ Tecla###addKey"))) {
         uint8_t hid = keyList[newKeyIndex_].hid;
         macroEvents_.push_back({rdc::MacroEventType::KeyDown, hid});
         macroEvents_.push_back({rdc::MacroEventType::Delay, static_cast<uint16_t>(std::max(1, newDelayMs_ / 10))});
         macroEvents_.push_back({rdc::MacroEventType::KeyUp, hid});
     }
     ImGui::SameLine();
-    if (ImGui::Button("+ Clique esq.")) {
+    if (ImGui::Button(tr("+ Left click###addLeft", "+ Clique esq.###addLeft"))) {
         macroEvents_.push_back({rdc::MacroEventType::MouseDown, 0x01});
         macroEvents_.push_back({rdc::MacroEventType::Delay, static_cast<uint16_t>(std::max(1, newDelayMs_ / 10))});
         macroEvents_.push_back({rdc::MacroEventType::MouseUp, 0x01});
     }
     ImGui::SameLine();
-    if (ImGui::Button("+ Clique dir.")) {
+    if (ImGui::Button(tr("+ Right click###addRight", "+ Clique dir.###addRight"))) {
         macroEvents_.push_back({rdc::MacroEventType::MouseDown, 0x02});
         macroEvents_.push_back({rdc::MacroEventType::Delay, static_cast<uint16_t>(std::max(1, newDelayMs_ / 10))});
         macroEvents_.push_back({rdc::MacroEventType::MouseUp, 0x02});
@@ -649,14 +698,14 @@ void App::drawMacroTab() {
     ImGui::InputInt("ms", &newDelayMs_, 10, 100);
     newDelayMs_ = std::clamp(newDelayMs_, 10, 655350);
     ImGui::SameLine();
-    if (ImGui::Button("+ Espera")) {
+    if (ImGui::Button(tr("+ Delay###addDelay", "+ Espera###addDelay"))) {
         macroEvents_.push_back({rdc::MacroEventType::Delay, static_cast<uint16_t>(newDelayMs_ / 10)});
     }
     ImGui::EndDisabled();
 
     int count = static_cast<int>(macroEvents_.size());
     ImVec4 countColor = count > rdc::kMacroMaxEvents ? ImVec4(1.0f, 0.45f, 0.4f, 1.0f) : ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
-    ImGui::TextColored(countColor, "%d / %d eventos", count, rdc::kMacroMaxEvents);
+    ImGui::TextColored(countColor, tr("%d / %d events", "%d / %d eventos"), count, rdc::kMacroMaxEvents);
 
     drawMacroEvents();
 }
@@ -677,7 +726,7 @@ void App::drawMacroEvents() {
         ImGui::Text("%3d", i + 1);
         ImGui::SameLine();
         if (event.type == rdc::MacroEventType::Delay) {
-            ImGui::TextUnformatted("Esperar");
+            ImGui::TextUnformatted(tr("Wait", "Esperar"));
             ImGui::SameLine();
             int ms = event.value * 10;
             ImGui::SetNextItemWidth(110);
@@ -698,7 +747,7 @@ void App::drawMacroEvents() {
             moveTo = i + 1;
         }
         ImGui::SameLine();
-        if (ImGui::SmallButton("Remover")) {
+        if (ImGui::SmallButton(tr("Remove###remove", "Remover###remove"))) {
             removeIndex = i;
         }
         ImGui::PopID();

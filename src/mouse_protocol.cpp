@@ -4,6 +4,8 @@
 
 #include <algorithm>
 
+#include "i18n.h"
+
 namespace rdc {
 
 namespace {
@@ -115,15 +117,15 @@ uint8_t pollRawFromHz(int hz) {
 
 const char* ledEffectName(LedEffect effect) {
     switch (effect) {
-    case LedEffect::Breathing: return "Respiração";
-    case LedEffect::Rainbow: return "Arco-íris";
-    case LedEffect::Static: return "Fixo";
-    case LedEffect::Wave: return "Onda";
-    case LedEffect::GoWithoutTrace: return "Rastro";
-    case LedEffect::Reactive: return "Reativo";
-    case LedEffect::Flash: return "Piscar";
-    case LedEffect::Off: return "Desligado";
-    default: return "Desconhecido";
+    case LedEffect::Breathing: return i18n::tr("Breathing", "Respiração");
+    case LedEffect::Rainbow: return i18n::tr("Rainbow", "Arco-íris");
+    case LedEffect::Static: return i18n::tr("Static", "Fixo");
+    case LedEffect::Wave: return i18n::tr("Wave", "Onda");
+    case LedEffect::GoWithoutTrace: return i18n::tr("Trail", "Rastro");
+    case LedEffect::Reactive: return i18n::tr("Reactive", "Reativo");
+    case LedEffect::Flash: return i18n::tr("Flash", "Piscar");
+    case LedEffect::Off: return i18n::tr("Off", "Desligado");
+    default: return i18n::tr("Unknown", "Desconhecido");
     }
 }
 
@@ -135,10 +137,10 @@ bool Mouse::connect() {
     disconnect();
     auto path = HidDevice::findPath(kVendorId, kProductId, kConfigUsagePage);
     if (!path) {
-        return fail("Mouse não encontrado (04D9:FC30, interface 0xFFA0).");
+        return fail(i18n::tr("Mouse not found (04D9:FC30, interface 0xFFA0).", "Mouse não encontrado (04D9:FC30, interface 0xFFA0)."));
     }
     if (!device_.open(*path)) {
-        return fail("Não foi possível abrir a interface de configuração do mouse.");
+        return fail(i18n::tr("Could not open the mouse configuration interface.", "Não foi possível abrir a interface de configuração do mouse."));
     }
     lastError_.clear();
     return true;
@@ -159,7 +161,7 @@ bool Mouse::transfer(uint8_t reportId, size_t reportLength, const std::vector<ui
     std::copy(request.begin(), request.end(), buffer.begin());
     buffer[0] = reportId;
     if (!device_.setFeature(buffer.data(), buffer.size())) {
-        return fail("Falha ao enviar feature report.");
+        return fail(i18n::tr("Failed to send feature report.", "Falha ao enviar feature report."));
     }
     pause(10);
     if (!response) {
@@ -169,7 +171,7 @@ bool Mouse::transfer(uint8_t reportId, size_t reportLength, const std::vector<ui
     buffer[0] = reportId;
     buffer[1] = kCmdRead;
     if (!device_.getFeature(buffer.data(), buffer.size())) {
-        return fail("Falha ao ler feature report.");
+        return fail(i18n::tr("Failed to read feature report.", "Falha ao ler feature report."));
     }
     *response = std::move(buffer);
     return true;
@@ -239,7 +241,7 @@ bool Mouse::readActiveProfile(uint8_t& profile) {
 
 bool Mouse::writeActiveProfile(uint8_t profile) {
     if (profile >= kProfileCount) {
-        return fail("Perfil inválido.");
+        return fail(i18n::tr("Invalid profile.", "Perfil inválido."));
     }
     return writeMemory(kAddrActiveProfile, {profile, 0}) && apply(kApplyProfile);
 }
@@ -269,7 +271,7 @@ bool Mouse::writeLed(int profile, const LedSettings& led) {
     auto encoding = std::find_if(kLedEncodings.begin(), kLedEncodings.end(),
                                  [&](const LedEncoding& e) { return e.effect == led.effect; });
     if (encoding == kLedEncodings.end()) {
-        return fail("Efeito de LED inválido.");
+        return fail(i18n::tr("Invalid LED effect.", "Efeito de LED inválido."));
     }
     uint8_t speedByte = ledEffectHasSpeed(led.effect) ? static_cast<uint8_t>(9 - std::clamp<int>(led.speed, 1, 8)) : 0;
     auto brightness = static_cast<uint8_t>(std::clamp<int>(led.brightness, 1, 3));
@@ -349,7 +351,7 @@ bool Mouse::readButtons(int profile, std::array<ButtonAction, kButtonCount>& but
 
 bool Mouse::writeButton(int profile, int button, const ButtonAction& action) {
     if (button < 0 || button >= kButtonCount) {
-        return fail("Botão inválido.");
+        return fail(i18n::tr("Invalid button.", "Botão inválido."));
     }
     std::vector<uint8_t> data = {action.code, action.arg1, action.arg2, action.arg3};
     return writeMemory(static_cast<uint16_t>(kProfileBase[profile] + 0x42 + button * 4), data) && applyAll();
@@ -381,10 +383,10 @@ bool Mouse::readMacro(int index, std::vector<MacroEvent>& events) {
 
 bool Mouse::writeMacro(int index, const std::vector<MacroEvent>& events) {
     if (index < 0 || index >= kMacroCount) {
-        return fail("Índice de macro inválido.");
+        return fail(i18n::tr("Invalid macro index.", "Índice de macro inválido."));
     }
     if (static_cast<int>(events.size()) > kMacroMaxEvents) {
-        return fail("Macro grande demais (máximo de 66 eventos).");
+        return fail(i18n::tr("Macro too long (maximum of 66 events).", "Macro grande demais (máximo de 66 eventos)."));
     }
     auto address = static_cast<uint16_t>(kAddrMacro + index * kMacroBytes);
     std::vector<uint8_t> request = {0, kCmdWrite, static_cast<uint8_t>(address & 0xFF), static_cast<uint8_t>(address >> 8),

@@ -20,6 +20,7 @@ private:
     void reportResult(bool ok, const char* success);
 
     void drawHeader();
+    void drawLanguageSelector();
     void drawLightingTab();
     void drawDpiTab();
     void drawButtonsTab();

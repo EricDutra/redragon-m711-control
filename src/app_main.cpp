@@ -5,6 +5,7 @@
 #include <string>
 
 #include "app_ui.h"
+#include "i18n.h"
 #include "imgui.h"
 #include "imgui_impl_dx11.h"
 #include "imgui_impl_win32.h"
@@ -181,6 +182,7 @@ void loadFont() {
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
     ImGui_ImplWin32_EnableDpiAwareness();
+    i18n::loadLanguage();
 
     WNDCLASSEXW windowClass{};
     windowClass.cbSize = sizeof(windowClass);
@@ -200,7 +202,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
 
     if (!createDevice(hwnd)) {
         destroyDevice();
-        MessageBoxW(nullptr, L"Não foi possível inicializar o Direct3D 11.", L"Redragon Control", MB_ICONERROR);
+        MessageBoxW(nullptr, i18n::language() == i18n::Language::Portuguese ? L"Não foi possível inicializar o Direct3D 11." : L"Could not initialize Direct3D 11.", L"Redragon Control", MB_ICONERROR);
         return 1;
     }
 
